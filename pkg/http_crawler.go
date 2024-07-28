@@ -3,6 +3,8 @@ package pkg
 import (
 	"bufio"
 	"net/http"
+	"regexp"
+	"strings"
 	"sync"
 
 	"github.com/gofiber/fiber/v2/log"
@@ -32,50 +34,54 @@ func crawl(url string, depth int, urls *SafeMap) error {
 	}
 	urls.mutex.Unlock()
 
-	content, err := fetchContent(url)
+	content, new_urls, err := fetchContent(url)
 
 	if err != nil {
 		return err
 	}
 
-	log.Info(content)
-
 	urls.mutex.Lock()
 	urls.urls[url] = content
 	urls.mutex.Unlock()
 
-	new_urls := getUrlsFromContent(content)
-
 	for _, value := range new_urls {
+		log.Info(value)
 		crawl(value, depth-1, urls)
 	}
 
 	return nil
 }
 
-func fetchContent(url string) (content string, err error) {
+var r, _ = regexp.Compile("\"(https:\\/\\/[^\"]*)\"")
+
+func fetchContent(url string) (content string, urls []string, err error) {
 	resp, err := http.Get(url)
 
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	defer resp.Body.Close()
 
 	scanner := bufio.NewScanner(resp.Body)
 
+	result := make([]string, 0)
+
+	var builder strings.Builder
+
 	for scanner.Scan() {
-		content += scanner.Text() //TODO: Improve string concat performance
+		newLine := scanner.Text()
+		builder.WriteString(newLine)
+		urls := r.FindAllString(newLine, -1)
+
+		if len(urls) > 0 {
+			result = append(result, urls...) //Push this through a pointer?
+		}
 	}
 
 	if err := scanner.Err(); err != nil {
-		return "", err
+		return "", nil, err
 	}
 
-	return content, nil
-}
-
-func getUrlsFromContent(content string) []string {
-	result := make([]string, 0)
-	return result
+	return builder.String(), result, nil
 }
