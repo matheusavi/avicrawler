@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/avicrawler/db"
 	"github.com/gofiber/fiber/v2/log"
 )
 
@@ -68,9 +69,7 @@ func crawl(url string, depth int, urls *SafeMap, urlsChannel chan Url, wg *sync.
 		return err
 	}
 
-	urls.mutex.Lock()
-	urls.urls[url] = content
-	urls.mutex.Unlock()
+	db.SaveContent(url, content)
 
 	return nil
 }
