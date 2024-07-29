@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"bufio"
+	"io"
 	"net/http"
 	"regexp"
 	"strings"
@@ -15,28 +16,55 @@ type SafeMap struct {
 	mutex sync.Mutex
 }
 
-func CrawlUrl(url string, depth int) {
+type Url struct {
+	url   string
+	depth int
+}
+
+func CrawlUrl(url string, depth int) (nUrls int) {
 	safeMap := SafeMap{
 		urls:  make(map[string]string, 0),
 		mutex: sync.Mutex{},
 	}
-	crawl(url, depth, &safeMap)
+
+	urlChan := make(chan Url)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go crawl(url, depth, &safeMap, urlChan, &wg)
+
+	go func() {
+		wg.Wait()
+		close(urlChan)
+	}()
+
+	i := 1
+	for val := range urlChan {
+		i += 1
+		wg.Add(1)
+		go crawl(val.url, val.depth, &safeMap, urlChan, &wg)
+	}
+	return i
 }
 
-func crawl(url string, depth int, urls *SafeMap) error {
+func crawl(url string, depth int, urls *SafeMap, urlsChannel chan Url, wg *sync.WaitGroup) error {
+	defer wg.Done()
+
 	if depth <= 0 {
 		return nil
 	}
 
 	urls.mutex.Lock()
 	if _, exists := urls.urls[url]; exists {
+		urls.mutex.Unlock()
 		return nil
 	}
+	urls.urls[url] = ""
 	urls.mutex.Unlock()
 
-	content, new_urls, err := fetchContent(url)
+	content, err := fetchContent(url, depth, urlsChannel)
 
 	if err != nil {
+		log.Error(err)
 		return err
 	}
 
@@ -44,44 +72,44 @@ func crawl(url string, depth int, urls *SafeMap) error {
 	urls.urls[url] = content
 	urls.mutex.Unlock()
 
-	for _, value := range new_urls {
-		log.Info(value)
-		crawl(value, depth-1, urls)
-	}
-
 	return nil
 }
 
-var r, _ = regexp.Compile("\"(https:\\/\\/[^\"]*)\"")
+var r = regexp.MustCompile(`https:\/\/[^"]*`)
 
-func fetchContent(url string) (content string, urls []string, err error) {
+func fetchContent(url string, depth int, urlsChannel chan Url) (content string, err error) {
 	resp, err := http.Get(url)
 
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
 
 	defer resp.Body.Close()
 
-	scanner := bufio.NewScanner(resp.Body)
-
-	result := make([]string, 0)
+	reader := bufio.NewReader(resp.Body)
 
 	var builder strings.Builder
 
-	for scanner.Scan() {
-		newLine := scanner.Text()
+	for {
+		newLine, err := reader.ReadString('\n')
+
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return "", err
+		}
+
 		builder.WriteString(newLine)
 		urls := r.FindAllString(newLine, -1)
 
-		if len(urls) > 0 {
-			result = append(result, urls...) //Push this through a pointer?
+		for _, val := range urls {
+			urlsChannel <- Url{
+				url:   val,
+				depth: depth - 1,
+			}
 		}
 	}
 
-	if err := scanner.Err(); err != nil {
-		return "", nil, err
-	}
-
-	return builder.String(), result, nil
+	return builder.String(), nil
 }
