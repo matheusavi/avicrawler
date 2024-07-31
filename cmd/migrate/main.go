@@ -10,8 +10,8 @@ import (
 
 func main() {
 	m, err := migrate.New(
-		"./cmd/migrate/migrations",
-		"postgres://postgres:postgres@localhost:5432/example?sslmode=disable")
+		"file:C:/repos/avicrawler/cmd/migrate/migrations", //TODO - Create the path here
+		"postgres://postgres:avi123@localhost:5432/crawler?sslmode=disable")
 	if err != nil {
 		log.Fatal(err)
 	}

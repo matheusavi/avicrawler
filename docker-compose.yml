@@ -1,0 +1,23 @@
+services:
+  backend:
+    build:
+      context: .
+      target: api
+    ports:
+      - 3457:3457
+    shm_size: 64mb
+  migration:
+    build:
+      context: .
+      target: migration
+    shm_size: 64mb
+    depends_on: ["db"]
+  db:
+    image: postgres
+    restart: always
+    shm_size: 128mb
+    environment:
+      POSTGRES_PASSWORD: avi123
+      POSTGRES_DB: crawler
+    ports:
+      - 5432:5432
