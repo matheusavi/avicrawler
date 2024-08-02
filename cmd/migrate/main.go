@@ -2,6 +2,8 @@ package main
 
 import (
 	"log"
+	"os"
+	"strings"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -9,9 +11,18 @@ import (
 )
 
 func main() {
+	dir, err := os.Getwd()
+	dir = strings.ReplaceAll(dir, "\\", "/")
+	log.Println("migrating")
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	migrationPath := "file:" + dir + "/cmd/migrate/migrations"
+	log.Println(migrationPath)
 	m, err := migrate.New(
-		"file:C:/repos/avicrawler/cmd/migrate/migrations", //TODO - Create the path here
-		"postgres://postgres:avi123@localhost:5432/crawler?sslmode=disable")
+		migrationPath,
+		"postgres://postgres:avi123@db:5432/crawler?sslmode=disable")
 	if err != nil {
 		log.Fatal(err)
 	}
