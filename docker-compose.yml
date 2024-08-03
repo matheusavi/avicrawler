@@ -13,6 +13,8 @@ services:
       target: migration
     shm_size: 64mb
     depends_on: ["db"]
+    environment:
+      DSN: postgres://postgres:avi123@db:5432/crawler?sslmode=disable
   db:
     image: postgres
     restart: always
