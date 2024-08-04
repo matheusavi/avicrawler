@@ -1,0 +1,4 @@
+server:
+  port: 3457
+database:
+  dsn: "postgres://postgres:avi123@localhost:5432/crawler?sslmode=disable"
