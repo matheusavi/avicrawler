@@ -4,6 +4,11 @@
 ## Or simply
 `docker compose up`
 
+## Try it:
+`http://localhost:3457/crawl?url=https://en.wikipedia.org/wiki/Futures_and_promises`
+
+It'll save the pages data at the database.
+
 ## How to create migrations?
 You'll need [golang-migrate](https://github.com/golang-migrate/) installed:
 
