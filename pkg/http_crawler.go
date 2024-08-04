@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"bufio"
+	"context"
 	"io"
 	"net/http"
 	"regexp"
@@ -22,7 +23,7 @@ type Url struct {
 	depth int
 }
 
-func CrawlUrl(url string, depth int) (nUrls int) {
+func CrawlUrl(url string, depth int, c context.Context) (nUrls int) {
 	safeMap := SafeMap{
 		urls:  make(map[string]string, 0),
 		mutex: sync.Mutex{},
@@ -31,7 +32,7 @@ func CrawlUrl(url string, depth int) (nUrls int) {
 	urlChan := make(chan Url)
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go crawl(url, depth, &safeMap, urlChan, &wg)
+	go crawl(url, depth, &safeMap, urlChan, &wg, c)
 
 	go func() {
 		wg.Wait()
@@ -42,12 +43,12 @@ func CrawlUrl(url string, depth int) (nUrls int) {
 	for val := range urlChan {
 		i += 1
 		wg.Add(1)
-		go crawl(val.url, val.depth, &safeMap, urlChan, &wg)
+		go crawl(val.url, val.depth, &safeMap, urlChan, &wg, c)
 	}
 	return i
 }
 
-func crawl(url string, depth int, urls *SafeMap, urlsChannel chan Url, wg *sync.WaitGroup) error {
+func crawl(url string, depth int, urls *SafeMap, urlsChannel chan Url, wg *sync.WaitGroup, c context.Context) error {
 	defer wg.Done()
 
 	if depth <= 0 {
@@ -69,7 +70,10 @@ func crawl(url string, depth int, urls *SafeMap, urlsChannel chan Url, wg *sync.
 		return err
 	}
 
-	db.SaveContent(url, content)
+	db.SaveContent(&db.Site{
+		Url:     url,
+		Content: content,
+	}, c)
 
 	return nil
 }

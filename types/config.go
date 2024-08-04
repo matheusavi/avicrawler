@@ -1,7 +1,6 @@
 package types
 
 import (
-	"log"
 	"os"
 
 	"github.com/kelseyhightower/envconfig"
@@ -18,29 +17,19 @@ type InitialConfig struct {
 	} `yaml:"database"`
 }
 
-func (cfg *InitialConfig) ParseFromFile() {
+func (cfg *InitialConfig) ParseFromFile() error {
 	f, err := os.Open("config.yml")
 
 	if err != nil {
-		processError(err)
+		return err
 	}
 
 	defer f.Close()
 
 	decoder := yaml.NewDecoder(f)
-	err = decoder.Decode(&cfg)
-	if err != nil {
-		processError(err)
-	}
+	return decoder.Decode(&cfg)
 }
 
-func (cfg *InitialConfig) ParseFromEnv() {
-	err := envconfig.Process("", cfg)
-	if err != nil {
-		processError(err)
-	}
-}
-
-func processError(err error) {
-	log.Fatal(err)
+func (cfg *InitialConfig) ParseFromEnv() error {
+	return envconfig.Process("", cfg)
 }

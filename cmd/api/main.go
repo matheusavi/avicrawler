@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	"github.com/avicrawler/db"
 	"github.com/avicrawler/handlers"
 	"github.com/avicrawler/types"
 	"github.com/gofiber/fiber/v2"
@@ -10,8 +11,23 @@ import (
 
 func main() {
 	var cfg types.InitialConfig
-	cfg.ParseFromFile()
-	cfg.ParseFromEnv()
+	err := cfg.ParseFromFile()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = cfg.ParseFromEnv()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = db.InitializeStore(cfg.Database.Dsn)
+
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	app := fiber.New()
 

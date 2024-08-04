@@ -1,6 +1,8 @@
 # How to run it?
 `go run .\cmd\api\main.go`
 
+## Or simply
+`docker compose up`
 
 ## How to create migrations?
 You'll need [golang-migrate](https://github.com/golang-migrate/) installed:
